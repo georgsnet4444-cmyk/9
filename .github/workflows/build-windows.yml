@@ -22,9 +22,26 @@ jobs:
         run: cmake --build build --config Release --target NorthstarMastering_VST3 --parallel
 
       - name: Verify and stage bundle
-        shell: pwsh
+        shell: bash
         run: |
-          $bundle = "build/NorthstarMastering_artefacts/Release/VST3/Northstar Master.vst3"
-          $dll = Join-Path $bundle "Contents/x86_64-win/Northstar Master.vst3"
-          if (-not (Test-Path $dll)) { throw "Plug-in binary not found: $dll" }
-          New-Item -ItemType Directory -Force stage |
+          bundle="build/NorthstarMastering_artefacts/Release/VST3/Northstar Master.vst3"
+          if [ ! -f "$bundle/Contents/x86_64-win/Northstar Master.vst3" ]; then
+            echo "Plug-in binary not found"
+            find build/NorthstarMastering_artefacts -maxdepth 4
+            exit 1
+          fi
+          mkdir -p stage
+          cp -r "$bundle" stage/
+          cd stage
+          7z a ../Northstar-Master-VST3-Windows-x64.zip "Northstar Master.vst3"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Northstar-Master-VST3-Windows-x64
+          path: stage
+
+      - name: Publish release (only for v* tags)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Northstar-Master-VST3-Windows-x64.zip
