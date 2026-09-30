@@ -1,0 +1,30 @@
+name: Build Windows VST3
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -A x64
+
+      - name: Build VST3 (Release)
+        run: cmake --build build --config Release --target NorthstarMastering_VST3 --parallel
+
+      - name: Verify and stage bundle
+        shell: pwsh
+        run: |
+          $bundle = "build/NorthstarMastering_artefacts/Release/VST3/Northstar Master.vst3"
+          $dll = Join-Path $bundle "Contents/x86_64-win/Northstar Master.vst3"
+          if (-not (Test-Path $dll)) { throw "Plug-in binary not found: $dll" }
+          New-Item -ItemType Directory -Force stage |
